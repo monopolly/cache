@@ -1,0 +1,4 @@
+deploy.sh
+run.sh
+redis_stats.gold
+redisprod_test.go
