@@ -24,7 +24,8 @@ func TestRedisLocal(u *testing.T) {
 	p := NewRedis("test", conn, time.Minute)
 
 	p.SetInt("t1", 42)
-	if p.GetInt("t1") != 42 {
+	_, v := p.GetInt("t1")
+	if v != 42 {
 		panic("error")
 	}
 
@@ -38,6 +39,23 @@ func TestRedisLocal(u *testing.T) {
 	}
 
 	fmt.Println(sid(1, "user"))
+
+	p.Set(1, []byte("1"))
+	p.Set(2, []byte("2"))
+	p.Set(3, []byte("3"))
+	p.Set(4, []byte("4"))
+	p.Set(5, []byte("5"))
+
+	list, err := p.Batch(1, 2, 3, 4, 5)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, x := range list {
+		fmt.Println(x.ID, string(x.Value))
+	}
+
+	// select {}
 }
 
 func TestRedisLocalDB(u *testing.T) {
@@ -46,7 +64,8 @@ func TestRedisLocalDB(u *testing.T) {
 	p := NewRedisConn("333", localhost, localpass, time.Minute)
 
 	p.SetInt("t1", 42)
-	if p.GetInt("t1") != 42 {
+	_, v := p.GetInt("t1")
+	if v != 42 {
 		panic("none equal")
 	}
 
@@ -62,25 +81,4 @@ func TestRedisLocalDB(u *testing.T) {
 
 func ___(u *testing.T) {
 	fmt.Printf("\033[1;32m%s\033[0m\n", strings.ReplaceAll(u.Name(), "Test", ""))
-}
-
-func BenchmarkRedisLocal(u *testing.B) {
-
-	conn := RedisConn(localhost, localpass)
-	p := NewRedis("test", conn, time.Minute)
-	u.ReportAllocs()
-	for u.Loop() {
-		p.Get("t1")
-	}
-}
-
-func Benchmark2Local(u *testing.B) {
-
-	conn := RedisConn(localhost, localpass)
-	p := NewRedis("test", conn, time.Minute)
-	u.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			p.Get("t1")
-		}
-	})
 }

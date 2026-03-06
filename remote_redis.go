@@ -5,6 +5,7 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/monopolly/cast"
 	"github.com/monopolly/numbers"
 	"github.com/niubaoshu/gotiny"
 	"github.com/redis/go-redis/v9"
@@ -18,10 +19,14 @@ type redisEngine struct {
 }
 
 // localhost:6379
-func RedisConn(host, pass string) (conn *redis.Client) {
+func RedisConn(host string, pass ...string) (conn *redis.Client) {
+	p := ""
+	if len(pass) > 0 {
+		p = pass[0]
+	}
 	return redis.NewClient(&redis.Options{
 		Addr:     host,
-		Password: pass,
+		Password: p,
 	})
 }
 
@@ -89,19 +94,20 @@ func (a *redisEngine) SetInt(id any, v int) {
 	a.set(id, numbers.IntBytes(v))
 }
 
-func (a *redisEngine) GetInt(id any) (v int) {
+func (a *redisEngine) GetInt(id any) (has bool, v int) {
 	b := a.get(id)
 	if b == nil {
 		return
 	}
-	return numbers.BytesInt(b)
+	v = numbers.BytesInt(b)
+	return
 }
 
 func (a *redisEngine) SetInts(id any, v []int) {
 	a.set(id, gotiny.Marshal(&v))
 }
 
-func (a *redisEngine) GetInts(id any) (v []int) {
+func (a *redisEngine) GetInts(id any) (has bool, v []int) {
 	b := a.get(id)
 	if b == nil {
 		return
@@ -133,4 +139,32 @@ func (a *redisEngine) Reset() {
 			break
 		}
 	}
+}
+
+type KV struct {
+	ID    any
+	Value []byte
+}
+
+func (a *redisEngine) Batch(ids ...any) (res []*KV, err error) {
+
+	keys := make([]string, len(ids))
+	for i, x := range ids {
+		keys[i] = a.sid(x)
+	}
+
+	ctx := context.Background()
+
+	vals, err := a.conn.MGet(ctx, keys...).Result()
+	if err != nil {
+		return
+	}
+
+	res = make([]*KV, len(ids))
+
+	for i, v := range vals {
+		res[i] = &KV{ID: ids[i], Value: cast.Bytes(v)}
+	}
+
+	return res, nil
 }

@@ -9,7 +9,8 @@ type Engine interface {
 	Delete(id any)
 	Reset()
 	SetInt(id any, v int)
-	GetInt(id any) (v int)
+	GetInt(id any) (has bool, v int)
 	SetInts(id any, v []int)
-	GetInts(id any) (v []int)
+	GetInts(id any) (has bool, v []int)
+	Batch(ids ...any) (res []*KV, err error)
 }

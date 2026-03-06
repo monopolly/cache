@@ -5,17 +5,19 @@ import (
 	"strconv"
 )
 
-func sid(id any, name string) (res string) {
-	switch k := id.(type) {
+func sid(id any, name string) string {
+	switch v := id.(type) {
 	case string:
-		res = k
+		return name + ":" + v
 	case int:
-		res = strconv.Itoa(k)
+		return name + ":" + strconv.Itoa(v)
+	case int64:
+		return name + ":" + strconv.FormatInt(v, 10)
+	case uint64:
+		return name + ":" + strconv.FormatUint(v, 10)
 	case []byte:
-		res = string(k)
+		return name + ":" + string(v)
 	default:
-		res = fmt.Sprint(id)
+		return name + ":" + fmt.Sprint(v)
 	}
-
-	return fmt.Sprintf("%s:%s", name, res)
 }

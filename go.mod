@@ -3,8 +3,8 @@ module github.com/monopolly/cache
 go 1.24.0
 
 require (
-	github.com/allegro/bigcache/v3 v3.1.0
 	github.com/json-iterator/go v1.1.12
+	github.com/monopolly/cast v0.0.0-20260118144344-6d5d089b25d9
 	github.com/monopolly/numbers v0.0.0-20220723225609-6f8038f3656c
 	github.com/niubaoshu/gotiny v0.0.3
 	github.com/redis/go-redis/v9 v9.17.2

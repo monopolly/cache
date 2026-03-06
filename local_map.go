@@ -6,6 +6,7 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
+	"github.com/monopolly/cast"
 )
 
 type localMap struct {
@@ -14,22 +15,28 @@ type localMap struct {
 	m     sync.RWMutex
 	max   int
 	add   time.Duration
+	name  string
 }
 
 // simple map
-func NewMap(ttl time.Duration) (res Engine) {
+func NewMap(name string, ttl time.Duration) (res Engine) {
 	a := new(localMap)
 	a.cache = map[any]any{}
 	a.ttl = map[any]int64{}
 	a.add = ttl
+	a.name = name
 	go a.deamon()
 	return a
 }
 
+func (a *localMap) sid(id any) (res string) {
+	return sid(id, a.name) //users:id
+}
+
 func (a *localMap) set(id any, v any) {
 	a.m.Lock()
-	a.cache[id] = v
-	a.ttl[id] = time.Now().Add(a.add).Unix()
+	a.cache[a.sid(id)] = v
+	a.ttl[a.sid(id)] = time.Now().Add(a.add).Unix()
 	a.m.Unlock()
 }
 
@@ -48,14 +55,13 @@ func (a *localMap) SetJson(id, v any) {
 
 func (a *localMap) get(id any) (res any) {
 	a.m.RLock()
-	res = a.cache[id]
+	res = a.cache[a.sid(id)]
 	a.m.RUnlock()
 	return
 }
 
 func (a *localMap) Get(id any) (res []byte) {
-	res, _ = a.get(id).([]byte)
-	return
+	return cast.Bytes(a.get(id))
 }
 
 func (a *localMap) Has(id any) (has bool) {
@@ -64,8 +70,8 @@ func (a *localMap) Has(id any) (has bool) {
 
 func (a *localMap) Delete(id any) {
 	a.m.Lock()
-	delete(a.cache, id)
-	delete(a.ttl, id)
+	delete(a.cache, a.sid(id))
+	delete(a.ttl, a.sid(id))
 	a.m.Unlock()
 }
 
@@ -80,8 +86,12 @@ func (a *localMap) SetInt(id any, v int) {
 	a.set(id, v)
 }
 
-func (a *localMap) GetInt(id any) (v int) {
-	v, _ = a.get(id).(int)
+func (a *localMap) GetInt(id any) (has bool, v int) {
+	p := a.get(id)
+	if p == nil {
+		return
+	}
+	v = cast.Int(p)
 	return
 }
 
@@ -89,8 +99,12 @@ func (a *localMap) SetInts(id any, v []int) {
 	a.set(id, v)
 }
 
-func (a *localMap) GetInts(id any) (v []int) {
-	v, _ = a.get(id).([]int)
+func (a *localMap) GetInts(id any) (has bool, v []int) {
+	p := a.get(id)
+	if p == nil {
+		return
+	}
+	v = cast.SliceInt(p)
 	return
 }
 
@@ -112,4 +126,16 @@ func (a *localMap) deamon() {
 		fmt.Println("ttl deleted", count, "/", len(a.cache))
 
 	}
+}
+
+func (a *localMap) Batch(ids ...any) (res []*KV, err error) {
+
+	res = make([]*KV, len(ids))
+
+	for i, x := range ids {
+		res[i] = &KV{ID: ids[i], Value: a.Get(x)}
+	}
+
+	return
+
 }
